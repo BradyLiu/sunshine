@@ -1,7 +1,3 @@
-//
-// Created by loki on 2/2/20.
-//
-
 #define BOOST_BIND_GLOBAL_PLACEHOLDERS
 
 extern "C" {
@@ -35,8 +31,6 @@ void free_msg(PRTSP_MESSAGE msg) {
 
   delete msg;
 }
-
-class rtsp_server_t;
 
 using msg_t      = util::safe_ptr<RTSP_MESSAGE, free_msg>;
 using cmd_func_t = std::function<void(rtsp_server_t *server, tcp::socket &, msg_t &&)>;
@@ -371,19 +365,6 @@ private:
   std::shared_ptr<socket_t> next_socket;
 };
 
-rtsp_server_t server {};
-
-void launch_session_raise(launch_session_t launch_session) {
-  server.session_raise(launch_session);
-}
-
-int session_count() {
-  // Ensure session_count is up to date
-  server.clear(false);
-
-  return server.session_count();
-}
-
 int send(tcp::socket &sock, const std::string_view &sv) {
   std::size_t bytes_send = 0;
 
@@ -686,40 +667,6 @@ void cmd_play(rtsp_server_t *server, tcp::socket &sock, msg_t &&req) {
   respond(sock, &option, 200, "OK", req->sequenceNumber, {});
 }
 
-void rtpThread() {
-  auto shutdown_event           = mail::man->event<bool>(mail::shutdown);
-  auto broadcast_shutdown_event = mail::man->event<bool>(mail::broadcast_shutdown);
-
-  server.map("OPTIONS"sv, &cmd_option);
-  server.map("DESCRIBE"sv, &cmd_describe);
-  server.map("SETUP"sv, &cmd_setup);
-  server.map("ANNOUNCE"sv, &cmd_announce);
-
-  server.map("PLAY"sv, &cmd_play);
-
-  boost::system::error_code ec;
-  if(server.bind(map_port(RTSP_SETUP_PORT), ec)) {
-    BOOST_LOG(fatal) << "Couldn't bind RTSP server to port ["sv << map_port(RTSP_SETUP_PORT) << "], " << ec.message();
-    shutdown_event->raise(true);
-
-    return;
-  }
-
-  while(!shutdown_event->peek()) {
-    server.iterate(std::min(500ms, config::stream.ping_timeout));
-
-    if(broadcast_shutdown_event->peek()) {
-      server.clear();
-    }
-    else {
-      // cleanup all stopped sessions
-      server.clear(false);
-    }
-  }
-
-  server.clear();
-}
-
 void print_msg(PRTSP_MESSAGE msg) {
   std::string_view type = msg->type == TYPE_RESPONSE ? "RESPONSE"sv : "REQUEST"sv;
 
@@ -763,4 +710,64 @@ void print_msg(PRTSP_MESSAGE msg) {
                    << messageBuffer << std::endl
                    << "---End MessageBuffer---"sv << std::endl;
 }
-} // namespace stream
+
+void rtsp_group::launch_session_raise(launch_session_t launch_session) {
+  auto server = servers_[0];
+  server->session_raise(launch_session);
+}
+
+int rtsp_group::session_count() {
+  auto server = servers_[0];
+
+  // Ensure session_count is up to date
+  server->clear(false);
+
+  return server->session_count();
+}
+
+void rtsp_group::start_group(){
+  rtsp_thread(servers_[0]);
+}
+
+bool rtsp_group::rtsp_thread(rtsp_server_t* server) {
+  auto shutdown_event           = mail::man->event<bool>(mail::shutdown);
+  auto broadcast_shutdown_event = mail::man->event<bool>(mail::broadcast_shutdown);
+
+  server->map("OPTIONS"sv,  &cmd_option);
+  server->map("DESCRIBE"sv, &cmd_describe);
+  server->map("SETUP"sv,    &cmd_setup);
+  server->map("ANNOUNCE"sv, &cmd_announce);
+  server->map("PLAY"sv,     &cmd_play);
+
+  boost::system::error_code ec;
+  if(server->bind(map_port(RTSP_SETUP_PORT), ec)) {
+    BOOST_LOG(fatal) << "Couldn't bind RTSP server to port ["sv << map_port(RTSP_SETUP_PORT) << "], " << ec.message();
+    shutdown_event->raise(true);
+    return false;
+  }
+
+  while(!shutdown_event->peek()) {
+    server->iterate(std::min(500ms, config::stream.ping_timeout));
+
+    if(broadcast_shutdown_event->peek()) {
+      server->clear();
+    }
+    else {
+      // cleanup all stopped sessions
+      server->clear(false);
+    }
+  }
+
+  server->clear();
+  return true;
+}
+
+rtsp_group::rtsp_group(){
+  servers_[0] = new rtsp_server_t {};
+}
+
+rtsp_group::~rtsp_group(){
+
+}
+
+}

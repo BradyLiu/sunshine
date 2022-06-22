@@ -637,7 +637,7 @@ void launch(bool &host_audio, resp_https_t response, req_https_t request) {
     response->close_connection_after_response = true;
   });
 
-  if(stream::session_count() == config::stream.channels) {
+  if(stream::rtsp_group::getInstance().session_count() == config::stream.channels) {
     tree.put("root.resume", 0);
     tree.put("root.<xmlattr>.status_code", 503);
 
@@ -678,7 +678,7 @@ void launch(bool &host_audio, resp_https_t response, req_https_t request) {
   }
 
   host_audio = util::from_view(args.at("localAudioPlayMode"));
-  stream::launch_session_raise(make_launch_session(host_audio, args));
+  stream::rtsp_group::getInstance().launch_session_raise(make_launch_session(host_audio, args));
 
   tree.put("root.<xmlattr>.status_code", 200);
   tree.put("root.sessionUrl0", "rtsp://"s + request->local_endpoint_address() + ':' + std::to_string(map_port(stream::RTSP_SETUP_PORT)));
@@ -699,7 +699,7 @@ void resume(bool &host_audio, resp_https_t response, req_https_t request) {
 
   // It is possible that due a race condition that this if-statement gives a false negative,
   // that is automatically resolved in rtsp_server_t
-  if(stream::session_count() == config::stream.channels) {
+  if(stream::rtsp_group::getInstance().session_count() == config::stream.channels) {
     tree.put("root.resume", 0);
     tree.put("root.<xmlattr>.status_code", 503);
 
@@ -725,7 +725,7 @@ void resume(bool &host_audio, resp_https_t response, req_https_t request) {
     return;
   }
 
-  stream::launch_session_raise(make_launch_session(host_audio, args));
+  stream::rtsp_group::getInstance().launch_session_raise(make_launch_session(host_audio, args));
 
   tree.put("root.<xmlattr>.status_code", 200);
   tree.put("root.sessionUrl0", "rtsp://"s + request->local_endpoint_address() + ':' + std::to_string(map_port(stream::RTSP_SETUP_PORT)));
@@ -746,7 +746,7 @@ void cancel(resp_https_t response, req_https_t request) {
 
   // It is possible that due a race condition that this if-statement gives a false positive,
   // the client should try again
-  if(stream::session_count() != 0) {
+  if(stream::rtsp_group::getInstance().session_count() != 0) {
     tree.put("root.resume", 0);
     tree.put("root.<xmlattr>.status_code", 503);
 

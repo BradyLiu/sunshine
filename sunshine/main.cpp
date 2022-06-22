@@ -273,7 +273,7 @@ int main(int argc, char *argv[]) {
   std::thread httpThread { nvhttp::start };
   std::thread configThread { confighttp::start };
 
-  stream::rtpThread();
+  stream::rtsp_group::getInstance().start_group();
 
   httpThread.join();
   configThread.join();
