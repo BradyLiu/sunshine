@@ -55,6 +55,12 @@ struct ctx_t {
   std::string cmd;
   std::string working_dir;
   std::string output;
+
+  std::string dev_video;
+  std::string dev_audio;
+  std::string display_name;
+  int         base_port;
+
 };
 
 class proc_t {

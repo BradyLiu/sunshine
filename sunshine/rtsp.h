@@ -7,6 +7,7 @@
 
 #include <atomic>
 
+#include "process.h"
 #include "crypto.h"
 #include "thread_safe.h"
 
@@ -33,8 +34,9 @@ public:
   void launch_session_raise(launch_session_t launch_session);
   int session_count();
 
+  void init_group(std::vector<proc::ctx_t> &apps);
   void start_group();
-  bool rtsp_thread(rtsp_server_t* server);
+  static bool rtsp_thread(rtsp_server_t* server);
 
 private:
   rtsp_group();

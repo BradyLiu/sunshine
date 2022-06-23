@@ -30,6 +30,7 @@ std::string read_file(const char *path);
 int write_file(const char *path, const std::string_view &contents);
 
 std::uint16_t map_port(int port);
+std::uint16_t map_port(int base_port, int port);
 
 namespace mail {
 #define MAIL(x) \

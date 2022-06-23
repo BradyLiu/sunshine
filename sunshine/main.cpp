@@ -273,6 +273,8 @@ int main(int argc, char *argv[]) {
   std::thread httpThread { nvhttp::start };
   std::thread configThread { confighttp::start };
 
+  // bind config to server.
+  stream::rtsp_group::getInstance().init_group(proc::proc.get_apps());
   stream::rtsp_group::getInstance().start_group();
 
   httpThread.join();
@@ -316,4 +318,8 @@ int write_file(const char *path, const std::string_view &contents) {
 
 std::uint16_t map_port(int port) {
   return (std::uint16_t)((int)config::sunshine.port + port);
+}
+
+std::uint16_t map_port(int base_port, int port){
+  return (std::uint16_t)(base_port + port);
 }

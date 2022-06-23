@@ -15,6 +15,7 @@
 
 #include "main.h"
 #include "utility.h"
+#include "config.h"
 
 namespace proc {
 using namespace std::literals;
@@ -281,6 +282,12 @@ std::optional<proc::proc_t> parse(const std::string &file_name) {
       auto cmd                = app_node.get_optional<std::string>("cmd"s);
       auto working_dir        = app_node.get_optional<std::string>("working-dir"s);
 
+      // 必须存在
+      auto dev_video    = app_node.get<std::string>("dev-video"s);
+      auto dev_audio    = app_node.get<std::string>("dev-audio"s);
+      auto display_name = app_node.get<std::string>("display-name"s);
+      auto base_port      = app_node.get<int>("base-port"s);
+
       std::vector<proc::cmd_t> prep_cmds;
       if(prep_nodes_opt) {
         auto &prep_nodes = *prep_nodes_opt;
@@ -325,6 +332,11 @@ std::optional<proc::proc_t> parse(const std::string &file_name) {
       ctx.prep_cmds = std::move(prep_cmds);
       ctx.detached  = std::move(detached);
 
+      ctx.dev_video    = std::move(dev_video);
+      ctx.dev_audio    = std::move(dev_audio);
+      ctx.display_name = std::move(display_name);
+      ctx.base_port    = base_port;
+
       apps.emplace_back(std::move(ctx));
     }
 
@@ -343,11 +355,16 @@ void refresh(const std::string &file_name) {
   auto proc_opt = proc::parse(file_name);
 
   if(proc_opt) {
-    {
-      proc::ctx_t ctx;
-      ctx.name = "Desktop"s;
-      proc_opt->get_apps().emplace(std::begin(proc_opt->get_apps()), std::move(ctx));
-    }
+//    {
+//      proc::ctx_t ctx;
+//      ctx.name = "Desktop"s;
+//      ctx.display_name = "Desktop"s;
+//      ctx.base_port = (int)config::sunshine.port;
+//      ctx.dev_video = config::video.output_name;
+//      ctx.dev_audio = config::audio.sink;
+//
+//      proc_opt->get_apps().emplace(std::begin(proc_opt->get_apps()), std::move(ctx));
+//    }
     proc = std::move(*proc_opt);
   }
 }

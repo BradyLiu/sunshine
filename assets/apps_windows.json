@@ -3,11 +3,19 @@
 		"PATH":"$(PATH);C:\\Program Files (x86)\\Steam"
 	},
 	"apps":[
-	{
-		"name":"Steam BigPicture",
-
-		"output":"steam.txt",
-		"detached":["steam steam://open/bigpicture"]
-	}
+		{
+			"name":"test1",
+			"dev-video": "{0.0.0.00000000}.{7f1af320-01a1-49ea-a10c-bda2be6c7407}",
+			"dev-audio": "\\\\.\\DISPLAY1",
+			"display-name": "test1",
+			"base-port": 47989
+		},
+		{
+			"name":"test2",
+			"dev-video": "{0.0.0.00000000}.{7f1af320-01a1-49ea-a10c-bda2be6c7407}",
+			"dev-audio": "\\\\.\\DISPLAY2",
+			"display-name": "test2",
+			"base-port": 57989
+		}
 	]
 }

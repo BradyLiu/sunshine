@@ -206,6 +206,14 @@ public:
     clear();
   }
 
+  void set_proc(proc::ctx_t &proc){
+    proc_ = &proc;
+  }
+
+  proc::ctx_t *get_proc(){
+    return proc_;
+  }
+
   int bind(std::uint16_t port, boost::system::error_code &ec) {
     {
       auto lg = _session_slots.lock();
@@ -363,6 +371,7 @@ private:
   tcp::acceptor acceptor { ios };
 
   std::shared_ptr<socket_t> next_socket;
+  proc::ctx_t *proc_;
 };
 
 int send(tcp::socket &sock, const std::string_view &sv) {
@@ -725,11 +734,35 @@ int rtsp_group::session_count() {
   return server->session_count();
 }
 
+void rtsp_group::init_group(std::vector<proc::ctx_t> &apps){
+  int i = 0;
+  for(auto &proc : apps) {
+    BOOST_LOG(info) << proc.display_name << "[" << proc.name << "] index:" << i;
+    auto svr = new rtsp_server_t {};
+    svr->set_proc(proc);
+    servers_[i++] = svr;
+  }
+}
+
 void rtsp_group::start_group(){
-  rtsp_thread(servers_[0]);
+  //TODO
+//  std::vector<std::thread*> threads;
+//  for (auto &kv : servers_) {
+//    std::thread temp (stream::rtsp_group::rtsp_thread, kv.second);
+//    threads.push_back(&temp);
+//  }
+
+  std::thread svrThread1 (stream::rtsp_group::rtsp_thread, servers_[0]);
+  std::thread svrThread2 (stream::rtsp_group::rtsp_thread, servers_[1]);
+
+  svrThread1.join();
+  svrThread2.join();
 }
 
 bool rtsp_group::rtsp_thread(rtsp_server_t* server) {
+  int rtsp_port = map_port(server->get_proc()->base_port, RTSP_SETUP_PORT);
+  BOOST_LOG(info) << "RTSP server:"sv << server->get_proc()->name << " thread start. binding :"sv << rtsp_port;
+
   auto shutdown_event           = mail::man->event<bool>(mail::shutdown);
   auto broadcast_shutdown_event = mail::man->event<bool>(mail::broadcast_shutdown);
 
@@ -740,8 +773,8 @@ bool rtsp_group::rtsp_thread(rtsp_server_t* server) {
   server->map("PLAY"sv,     &cmd_play);
 
   boost::system::error_code ec;
-  if(server->bind(map_port(RTSP_SETUP_PORT), ec)) {
-    BOOST_LOG(fatal) << "Couldn't bind RTSP server to port ["sv << map_port(RTSP_SETUP_PORT) << "], " << ec.message();
+  if(server->bind(rtsp_port, ec)) {
+    BOOST_LOG(fatal) << "Couldn't bind RTSP server to port ["sv << rtsp_port << "], " << ec.message();
     shutdown_event->raise(true);
     return false;
   }
@@ -763,11 +796,11 @@ bool rtsp_group::rtsp_thread(rtsp_server_t* server) {
 }
 
 rtsp_group::rtsp_group(){
-  servers_[0] = new rtsp_server_t {};
+  //todo
 }
 
 rtsp_group::~rtsp_group(){
-
+  //todo
 }
 
 }
